@@ -100,7 +100,7 @@ https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/getUpdates
 
 Once everything is set up, you can run the main script:
 ```bash
-python your_main_script_name.py
+python smartBot.py
 ```
 
 ### What to Expect:
