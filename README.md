@@ -173,7 +173,7 @@ We welcome all kinds of contributions — whether it's fixing bugs, improving do
 
 [![LinkedIn](https://img.icons8.com/ios-filled/40/0077B5/linkedin.png)](https://www.linkedin.com/in/v-athul/) &nbsp;&nbsp;&nbsp;
 [![Twitter](https://img.icons8.com/ios-filled/40/1DA1F2/twitter.png)](https://x.com/AthulViswanthan) &nbsp;&nbsp;&nbsp;
-[![GitHub](https://img.icons8.com/ios-glyphs/40/000000/github.png)](https://github.com/athul12v)
+[![GitHub](https://img.icons8.com/ios-glyphs/30/ffffff/github.png)](https://github.com/athul12v)
 
 </div>
 
