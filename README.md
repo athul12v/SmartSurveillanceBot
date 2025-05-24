@@ -57,8 +57,8 @@ A sleek, real-time surveillance system built with **Streamlit** and **YOLOv5**, 
 
 ```bash
 git clone https://github.com/athul12v/smart-surveillance.git
-cd smart-surveillance
-````
+cd SmartSurveillanBot
+```
 
 2. **Create & activate virtual environment**
 
