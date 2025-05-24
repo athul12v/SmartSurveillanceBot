@@ -1,4 +1,4 @@
-# Smart Surveillance: Real-time Object Detection & Telegram Notifier
+# Next-Gen Smart Surveillance | Real-Time Object Detection + Telegram Alert System
 
 A sleek, real-time surveillance system built with **Streamlit** and **YOLOv5**, enabling live object detection through your webcam. It captures images of detected objects (like people, cats, dogs, cars) and sends instant alerts with snapshots to your Telegram chat — all wrapped in an intuitive, responsive web UI that looks and feels like a smart surveillance console.
 
