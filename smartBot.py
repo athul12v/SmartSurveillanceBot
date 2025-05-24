@@ -1,122 +1,186 @@
-import cv2
+import streamlit as st
 import torch
-import time
+import cv2
 import os
-from telegram import Update
-from telegram.ext import Application, MessageHandler, filters
-import asyncio
+import time
+import requests
+from datetime import datetime
 from dotenv import load_dotenv
 
-load_dotenv()
+# ---- UI Setup ----
+st.set_page_config(page_title="Smart Surveillance", layout="wide")
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+load_dotenv()
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+if not BOT_TOKEN or not CHAT_ID:
+    st.error("❌ BOT_TOKEN or CHAT_ID is not set. Please check your configuration.")
 
-# Initialize camera (0 for the default camera)
-cap = cv2.VideoCapture(0)
+CAPTURE_FOLDER = "capture"
+ALERT_COOLDOWN = 30  # seconds
+os.makedirs(CAPTURE_FOLDER, exist_ok=True)
 
-# Check if the camera is available
-if not cap.isOpened():
-    print("Error: Could not access the camera.")
-    exit()
+@st.cache_resource
+def load_model():
+    return torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+model = load_model()
 
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s')  # yolov5s for faster inference
+# Initialize session state
+if "monitoring" not in st.session_state:
+    st.session_state.monitoring = False
+if "alert_sent_time" not in st.session_state:
+    st.session_state.alert_sent_time = 0
+if "cap" not in st.session_state:
+    st.session_state.cap = None
+if "alert_images" not in st.session_state:
+    st.session_state.alert_images = []  # Store alert image paths for gallery
 
-TARGET_CLASSES = ['person', 'cat', 'dog', 'car']
-PERSON_CLASS = 'person'
+# Custom CSS for dark theme and styles
+st.markdown(
+    """
+    <style>
+    .css-18e3th9 { padding-top: 1rem; }
+    .big-font { font-size:22px !important; font-weight: 700; }
+    .status-ok { color: #00ff00; font-weight: 600; }
+    .status-alert { color: #ff4c4c; font-weight: 700; }
+    .alert-thumb { border-radius: 8px; margin: 5px; box-shadow: 0 0 8px rgba(255, 76, 76, 0.7); }
+    .title-container { display: flex; align-items: center; justify-content: space-between; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-last_detection_time = time.time()
-DETECTION_INTERVAL = 5  # seconds
+st.title("📹 Smart Surveillance System")
 
-if not os.path.exists('captures'):
-    os.makedirs('captures')
-
-# Send a Telegram notification with the captured image
-async def send_telegram_notification(message, image_path):
+def send_telegram_alert(img_path):
     try:
-        # Send message
-        await application.bot.send_message(chat_id=CHAT_ID, text=message)
-
-        # Send photo
-        with open(image_path, 'rb') as image_file:
-            await application.bot.send_photo(chat_id=CHAT_ID, photo=image_file)
-
-        print(f"Telegram notification sent: {message}")
+        caption = f"🚨 Person detected at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+        with open(img_path, "rb") as f:
+            files = {"photo": f}
+            data = {"chat_id": CHAT_ID, "caption": caption}
+            resp = requests.post(url, data=data, files=files)
+            print("Telegram response:", resp.status_code, resp.text)
+            return resp.status_code == 200
     except Exception as e:
-        print(f"Error sending Telegram notification: {e}")
+        print("Telegram alert failed:", str(e))
+        return False
 
-# Function for detecting objects and sending notifications
-async def detect_and_notify():
-    global last_detection_time
-    while True:
-        ret, frame = cap.read()
+def start_monitoring():
+    if st.session_state.cap is None:
+        st.session_state.cap = cv2.VideoCapture(0)
+    st.session_state.monitoring = True
 
-        if not ret:
-            print("Error: Failed to capture frame.")
-            break
+def stop_monitoring():
+    if st.session_state.cap is not None:
+        st.session_state.cap.release()
+        st.session_state.cap = None
+    st.session_state.monitoring = False
 
-        results = model(frame)
+# --- Control Buttons ---
+col1, col2 = st.columns([1,1])
+with col1:
+    if st.button("▶️ Start Monitoring", key="start_btn") and not st.session_state.monitoring:
+        start_monitoring()
+with col2:
+    if st.button("⏹ Stop Monitoring", key="stop_btn") and st.session_state.monitoring:
+        stop_monitoring()
 
-        results.render()
+# --- Layout ---
+frame_col, info_col = st.columns([3,1])
+frame_placeholder = frame_col.empty()
+alert_placeholder = st.empty()
+log_container = info_col.container()
+alert_gallery = info_col.container()
 
-        output_frame = results.ims[0]
+# --- Monitoring Loop ---
+if st.session_state.monitoring:
+    cap = st.session_state.cap
+    if cap is None or not cap.isOpened():
+        st.error("⚠️ Cannot open webcam")
+        stop_monitoring()
+    else:
+        for _ in range(1000):
+            if not st.session_state.monitoring:
+                break
 
-        # Loop through the detections in the frame
-        for idx, conf, bbox in zip(results.xyxy[0][:, -1], results.xyxy[0][:, -2], results.xyxy[0][:, :-2]):
-            class_name = model.names[int(idx)]  # Get the class name (person, dog, etc.)
-            
-            # Check if the object belongs to the target classes
-            if class_name in TARGET_CLASSES:
-                current_time = time.time()
+            ret, frame = cap.read()
+            if not ret:
+                st.error("⚠️ Failed to grab frame")
+                break
 
-                # Only send notifications if enough time has passed (avoid spam)
-                if current_time - last_detection_time > DETECTION_INTERVAL:
-                    timestamp = time.strftime("%Y%m%d-%H%M%S")
-                    filename = f"captures/captured_{class_name}_{timestamp}.jpg"
-                    cv2.imwrite(filename, output_frame)  # Save the image with bounding boxes
+            img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            results = model(img_rgb)
+            df = results.pandas().xyxy[0]
 
-                    # Special case for "person"
-                    if class_name == PERSON_CLASS:
-                        message = f"A person was detected at {timestamp}. Image saved."
-                    else:
-                        message = f"Object detected: {class_name} at {timestamp}. Image saved."
-                    
-                    # Send Telegram notification with the captured image
-                    await send_telegram_notification(message, filename)
+            person_detected = False
+            alert_sent_this_frame = False
 
-                    # Update last detection time
-                    last_detection_time = current_time
+            for _, row in df.iterrows():
+                label = row['name']
+                conf = row['confidence']
+                if conf < 0.5:
+                    continue
 
-        # Display the frame with bounding boxes
-        cv2.imshow("Object Detection", output_frame)
+                x1, y1, x2, y2 = int(row['xmin']), int(row['ymin']), int(row['xmax']), int(row['ymax'])
+                x1, y1 = max(0, x1), max(0, y1)
+                x2, y2 = min(frame.shape[1]-1, x2), min(frame.shape[0]-1, y2)
 
-        # Exit the loop when 'q' is pressed
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+                crop_img = frame[y1:y2, x1:x2]
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                filename = f"{label}_{timestamp}.jpg"
+                filepath = os.path.join(CAPTURE_FOLDER, filename)
+                cv2.imwrite(filepath, crop_img)
+                time.sleep(0.05)
 
-    cap.release()
-    cv2.destroyAllWindows()
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, f"{label} {conf:.2f}", (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-async def handle_image(update: Update, context):
-    user_id = update.message.from_user.id  # Get the user ID
-    file = await update.message.photo[-1].get_file()  # Get the photo file sent by the user
-    file_path = f'captures/user_image_{user_id}.jpg'
-    await file.download(file_path)  # Save the received image
+                if label == "person":
+                    person_detected = True
+                    current_time = time.time()
+                    if current_time - st.session_state.alert_sent_time > ALERT_COOLDOWN:
+                        sent = send_telegram_alert(filepath)
+                        if sent:
+                            alert_placeholder.success(f"📸 Telegram alert sent: {filename}")
+                            st.session_state.alert_sent_time = current_time
+                            alert_sent_this_frame = True
 
-    # Send a reply to the user
-    await update.message.reply_text(f"Received your image! Someone detected!")
+                            # Add to alert gallery (keep only last 6)
+                            st.session_state.alert_images.insert(0, filepath)
+                            if len(st.session_state.alert_images) > 6:
+                                st.session_state.alert_images.pop()
+                        else:
+                            alert_placeholder.error("❌ Failed to send Telegram alert.")
 
-    with open(file_path, 'rb') as image_file:
-        await update.message.reply_photo(photo=image_file)
+            # Display live frame with bounding boxes
+            frame_placeholder.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), channels="RGB", use_column_width=True)
 
-# Add the image handler to the application
-application.add_handler(MessageHandler(filters.PHOTO, handle_image))
+            # Update detection log
+            status_text = (
+                f"<span class='status-alert'>🚨 Person Detected</span>"
+                if person_detected else
+                f"<span class='status-ok'>✅ Clear</span>"
+            )
+            log_container.markdown(
+                f"**🕒 {datetime.now().strftime('%H:%M:%S')}** – {status_text}",
+                unsafe_allow_html=True
+            )
 
-async def main():
-    # Start the object detection and notification loop
-    await detect_and_notify()
+            # Show alert thumbnails
+            with alert_gallery:
+                st.markdown("### Recent Alerts")
+                if st.session_state.alert_images:
+                    cols = st.columns(len(st.session_state.alert_images))
+                    for i, img_path in enumerate(st.session_state.alert_images):
+                        cols[i].image(img_path, width=100, caption=os.path.basename(img_path), use_column_width=False,
+                                      output_format='JPEG')
 
-if __name__ == '__main__':
-    asyncio.run(main())
+            time.sleep(0.1)
+
+        stop_monitoring()
+
+else:
+    st.info("▶️ Press 'Start Monitoring' to begin detection.")
