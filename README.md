@@ -1,166 +1,184 @@
-# Smart Surveillance: Object Detection & Telegram Notifier
+# Smart Surveillance: Real-time Object Detection & Telegram Notifier
 
-A real-time object detection system that leverages YOLOv5 to identify specific objects (like people, cats, dogs, and cars) from a live camera feed and sends instant notifications, along with a captured image, to a Telegram chat. The system also includes a Telegram bot that can receive images from users.
+A sleek, real-time surveillance system built with **Streamlit** and **YOLOv5**, enabling live object detection through your webcam. It captures images of detected objects (like people, cats, dogs, cars) and sends instant alerts with snapshots to your Telegram chat — all wrapped in an intuitive, responsive web UI that looks and feels like a smart surveillance console.
 
 ---
 
 ## ✨ Features
 
-- **Real-time Object Detection**: Continuously monitors a live camera feed for predefined objects.
-- **YOLOv5 Integration**: Utilizes the powerful YOLOv5 model for accurate and fast object recognition.
-- **Configurable Target Classes**: Easily specify which objects you want to detect (e.g., person, cat, dog, car).
-- **Intelligent Notification System**: Sends Telegram notifications only after a specified interval to prevent spam.
-- **Image Capture & Sharing**: Saves detected object frames with bounding boxes and sends them directly to your Telegram chat.
-- **Telegram Bot Interaction**: A Telegram bot that can receive images from users and provide a simple acknowledgment.
-- **Easy Setup**: Minimal configuration required to get started.
+- **Real-time Detection with Webcam**: Monitor live video feed and detect objects continuously.
+- **YOLOv5 Model Integration**: Utilizes the fast and accurate YOLOv5s pre-trained model.
+- **Configurable Target Objects**: Detects multiple objects, focusing on key targets like people, cats, dogs, and cars.
+- **Telegram Notifications with Cooldown**: Sends image alerts to Telegram only after a cooldown period to prevent spamming.
+- **Captured Image Storage**: Saves cropped detected object images locally with timestamped filenames.
+- **Interactive Streamlit Dashboard**: Start/Stop monitoring with clear UI feedback, live video display with bounding boxes, and alert messages.
+- **Robust Error Handling**: Handles webcam connection issues and Telegram notification failures gracefully.
+- **Easy Setup & Deployment**: Lightweight dependencies and minimal configuration for quick start.
 
 ---
 
-## 🚀 Technologies Used
+## 🚀 Tech Stack
 
-| Technology                | Description                                           | Icon                                   |
-|--------------------------|-------------------------------------------------------|----------------------------------------|
-| **Python**               | The core programming language for the application.    | ![Python](https://img.icons8.com/color/48/000000/python.png) |
-| **OpenCV (cv2)**        | Library for computer vision and image processing.      | ![OpenCV](https://img.icons8.com/color/48/000000/opencv.png) |
-| **PyTorch (torch)**     | Deep learning framework for building neural networks.  | ![PyTorch](https://img.icons8.com/color/48/000000/pytorch.png) |
-| **YOLOv5 (Ultralytics)**| State-of-the-art object detection model.               | ![YOLO](https://img.icons8.com/color/48/000000/yolo.png) |
-| **python-telegram-bot** | Library for interacting with the Telegram Bot API.    | ![Telegram](https://img.icons8.com/color/48/000000/telegram-app.png) |
-| **python-dotenv**       | Tool for managing environment variables.                | ![Dotenv](https://img.icons8.com/color/48/000000/dotenv.png) |
-
----
-
-## 🏗️ Architecture
-
-The system operates with a straightforward architecture, designed for real-time processing and efficient notification.
-
-### Conceptual Flow:
-1. **Camera Feed**: The system continuously captures frames from a connected webcam.
-2. **Object Detection (YOLOv5)**: Each captured frame is fed into the pre-trained YOLOv5 model.
-3. **Filtering & Analysis**: The model's detections are filtered to identify only the `TARGET_CLASSES`. A time-based debounce mechanism prevents excessive notifications.
-4. **Image Capture**: If a target object is detected and the notification interval has passed, the frame (with bounding boxes drawn) is saved locally.
-5. **Telegram Notification**: A message, along with the captured image, is sent to your configured Telegram chat ID.
-6. **Telegram Bot Listener**: Separately, the Telegram bot listens for incoming messages, specifically photos, and responds accordingly.
-
-[![Architecture Diagram](https://via.placeholder.com/800x400?text=Architecture+Diagram)](https://github.com/your-username/smart-surveillance)
+| Technology                | Description                                      | Icon                                   |
+|--------------------------|-------------------------------------------------|----------------------------------------|
+| **Python**               | Core programming language                        | ![Python](https://img.icons8.com/color/48/000000/python.png) |
+| **Streamlit**            | Interactive web app framework                    | ![Streamlit](https://img.icons8.com/color/48/000000/streamlit.png) |
+| **OpenCV**               | Real-time computer vision                        | ![OpenCV](https://img.icons8.com/color/48/000000/opencv.png) |
+| **PyTorch**              | Deep learning model loading and inference       | ![PyTorch](https://img.icons8.com/color/48/000000/pytorch.png) |
+| **YOLOv5 (Ultralytics)** | State-of-the-art object detection                | ![YOLO](https://img.icons8.com/color/48/000000/yolo.png) |
+| **Requests**             | HTTP requests for Telegram API integration      | ![Requests](https://img.icons8.com/color/48/000000/api-settings.png) |
 
 ---
 
-## ⚙️ Setup and Installation
+## 🏗️ Architecture Overview
 
-Follow these steps to get your Smart Surveillance system up and running.
+### Workflow:
+
+1. **Start Monitoring**: User clicks the button to open the webcam feed.
+2. **Frame Capture & Detection**: Frames are read in real-time and passed through YOLOv5.
+3. **Object Filtering**: Only detections above confidence threshold and matching target classes are processed.
+4. **Bounding Box Overlay**: Detected objects are marked visually on the live feed.
+5. **Image Capture & Notification**: When a target (e.g., person) is detected and cooldown elapsed, a cropped image is saved and sent via Telegram.
+6. **Stop Monitoring**: User can stop the feed to release resources gracefully.
+
+---
+
+## ⚙️ Setup & Installation
 
 ### Prerequisites
+
 - Python 3.8+
-- A webcam connected to your system.
-- A Telegram account.
+- A webcam connected and accessible
+- Telegram account and bot token
 
-### 1. Clone the Repository
+### Steps
+
+1. **Clone the repo**
+
 ```bash
-git clone https://github.com/your-username/smart-surveillance.git
+git clone https://github.com/athul12v/smart-surveillance.git
 cd smart-surveillance
-```
+````
 
-### 2. Create a Virtual Environment (Recommended)
+2. **Create & activate virtual environment**
+
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 ```
 
-### 3. Install Dependencies
+3. **Install dependencies**
+
 ```bash
 pip install -r requirements.txt
 ```
-_(You'll need to create a requirements.txt file based on the provided code. It should contain: opencv-python, torch, ultralytics/yolov5, python-telegram-bot, python-dotenv.)_
 
-### 4. Configure Environment Variables
-Create a .env file in the root directory of your project:
-```bash
-TELEGRAM_BOT_TOKEN="YOUR_TELEGRAM_BOT_TOKEN"
+*Example requirements.txt includes:*
+
+```
+streamlit
+torch
+opencv-python
+requests
+```
+
+4. **Configure environment variables**
+
+Create a `.env` file in project root:
+
+```env
+BOT_TOKEN="YOUR_TELEGRAM_BOT_TOKEN"
 CHAT_ID="YOUR_TELEGRAM_CHAT_ID"
 ```
 
-#### How to get YOUR_TELEGRAM_BOT_TOKEN:
-- Open Telegram and search for @BotFather.
-- Start a chat with BotFather and send /newbot.
-- Follow the instructions to choose a name and username for your bot.
-- BotFather will provide you with an API Token. Copy this token and paste it into your .env file.
+5. **Run the app**
 
-#### How to get YOUR_TELEGRAM_CHAT_ID:
-- Start a conversation with your newly created bot in Telegram.
-- Send any message to your bot.
-- Open your web browser and go to:
 ```bash
-https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/getUpdates
+streamlit run your_script_name.py
 ```
-- Look for the chat object in the JSON response. The id field within this object is your CHAT_ID. Copy this ID and paste it into your .env file.
+
+Open the URL printed by Streamlit in your browser to interact with the smart surveillance UI.
 
 ---
 
-## ▶️ Usage
+## ▶️ Usage Guide
 
-Once everything is set up, you can run the main script:
-```bash
-python smartBot.py
-```
-
-### What to Expect:
-- A window titled "Object Detection" will appear, displaying the live camera feed with bounding boxes around detected objects.
-- When a TARGET_CLASS object is detected, and the DETECTION_INTERVAL has passed, a notification and an image will be sent to your Telegram chat.
-- You can press `q` on the "Object Detection" window to quit the application.
-- You can send images to your Telegram bot, and it will acknowledge receipt.
+* Click **Start Monitoring** to begin object detection via webcam.
+* Watch the live feed on the dashboard with bounding boxes drawn.
+* Receive Telegram alerts with images whenever your target objects are detected.
+* Click **Stop Monitoring** to safely close the webcam and stop processing.
+* Alerts won’t spam thanks to cooldown timers between notifications.
+* Clear on-screen messages will inform you of detection status or errors.
 
 ---
 
-## 🔧 Customization
+## 🔧 Customization Options
 
-You can easily customize the detection behavior by modifying the following variables in the script:
-
-- **TARGET_CLASSES**: A list of strings representing the object classes you want to detect.
-```python
-TARGET_CLASSES = ['person', 'cat', 'dog', 'car']
-```
-
-- **DETECTION_INTERVAL**: The minimum time (in seconds) between sending notifications for new detections. This prevents notification spam.
-```python
-DETECTION_INTERVAL = 5  # seconds
-```
-
-- **Camera Selection**: If you have multiple cameras, you might need to change `cap = cv2.VideoCapture(0)` to `1`, `2`, etc., to select a different camera.
+* **Target Classes**: Change or add classes in the code (`'person'`, `'cat'`, `'dog'`, `'car'`).
+* **Confidence Threshold**: Adjust minimum detection confidence (currently 0.5).
+* **Alert Cooldown**: Modify cooldown seconds (default 30s) to tune notification frequency.
+* **Camera Source**: Change the camera index in OpenCV capture for multiple webcams.
 
 ---
 
 ## 💡 Future Enhancements
 
-- **Customizable Notification Messages**: Allow users to define their own notification message templates.
-- **Multiple Camera Support**: Extend to monitor multiple camera feeds simultaneously.
-- **Web Interface**: Develop a simple web interface for configuration and viewing detection history.
-- **Cloud Storage**: Option to upload captured images to cloud storage (e.g., Google Cloud Storage, AWS S3) instead of local storage.
-- **Advanced Alerting**: Integrate with other notification services (e.g., email, SMS).
-- **Time-based Scheduling**: Allow users to schedule when the detection system should be active.
-- **Motion Detection Pre-filter**: Use basic motion detection to trigger YOLOv5 inference only when movement is detected, saving resources.
+* Add multi-camera support and switch camera feeds dynamically.
+* Integrate motion detection as a pre-filter to optimize resource usage.
+* Implement alert history and dashboard analytics.
+* Allow configuring notification message templates via UI.
+* Store captured images to cloud for remote access.
+* Support additional notification channels like email or SMS.
+* Enable scheduling and automatic start/stop times.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! If you have suggestions, bug reports, or want to contribute code, please feel free to open an issue or submit a pull request.
+We welcome all kinds of contributions — whether it's fixing bugs, improving documentation, adding features, or optimizing the codebase.
 
+**How you can contribute:**
+
+1. **Report Bugs**  
+   Found an issue? Please open a detailed issue on GitHub so we can fix it quickly.
+
+2. **Request Features**  
+   Have an idea to make the project better? Submit a feature request with a clear description and use cases.
+
+3. **Submit Pull Requests**  
+   - Fork the repository  
+   - Create a new branch (`git checkout -b feature/YourFeature`)  
+   - Make your changes and commit with clear messages  
+   - Push to your fork and submit a PR against the main branch  
+   
+   We’ll review your contribution and provide feedback if needed.
+
+4. **Improve Documentation**  
+   Clear documentation helps everyone! Feel free to suggest enhancements or fix typos.
+
+5. **Spread the Word**  
+   Share the project with your network to help us grow the community.
+
+**Contribution Guidelines:**
+
+- Follow [PEP8](https://www.python.org/dev/peps/pep-0008/) coding standards for Python code.
+- Write clean, readable, and well-commented code.
+- Test your changes thoroughly.
+- Keep pull requests focused and concise.
 ---
 
-## 📄 License
+## 📱 Let’s Connect — I’m Just One Click Away!
 
-This project is licensed under the **MIT License** - a permissive license that allows for flexible usage, modification, and distribution. For more details, check out the full [LICENSE](LICENSE) file.
+<div align="center" style="margin-top: 10px; margin-bottom: 10px;">
 
----
+[![LinkedIn](https://img.icons8.com/ios-filled/40/0077B5/linkedin.png)](https://www.linkedin.com/in/v-athul/) &nbsp;&nbsp;&nbsp;
+[![Twitter](https://img.icons8.com/ios-filled/40/1DA1F2/twitter.png)](https://x.com/AthulViswanthan) &nbsp;&nbsp;&nbsp;
+[![GitHub](https://img.icons8.com/ios-glyphs/40/000000/github.png)](https://github.com/athul12v)
 
-## 📱 Let's Connect!
+</div>
 
-I love collaborating, sharing knowledge, and connecting with like-minded individuals. Feel free to reach out to me through any of the following platforms:
+> **Let's build the future of smart surveillance — together!**  
+> _Reach out anytime for collaborations, ideas, or a quick hello._
 
-- 🌟 **[LinkedIn](https://www.linkedin.com/in/v-athul/)** – Connect with me professionally and view my latest career updates.
-- 🐦 **[Twitter](https://x.com/AthulViswanthan)** – Follow me for updates, tech insights, and occasional musings.
-- 🧑‍💻 **[GitHub](https://github.com/athul12v)** – Explore my repositories, open-source projects, and contributions to the community.
-
-Let's grow together! 🚀
 
 ---
