@@ -60,3 +60,5 @@ tzdata==2025.2
 ultralytics==8.3.143
 ultralytics-thop==2.0.14
 urllib3==2.4.0
+streamlit
+face_recognition
